@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "Mindful Blocker",
+  "version": "1.0",
+  "description": "Blocks specified websites with a gentle reminder.",
+  "permissions": [
+    "storage",
+    "declarativeNetRequest"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["blocked.html", "styles.css"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}
