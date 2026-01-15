@@ -1,16 +1,22 @@
 // Save options to chrome.storage
 function addSite() {
   const siteInput = document.getElementById('siteInput');
+  const allowSubroutesCheckbox = document.getElementById('allowSubroutes');
   const site = siteInput.value.trim();
+  const allowSubroutes = allowSubroutesCheckbox.checked;
 
   if (!site) return;
 
   chrome.storage.local.get(['blockedSites'], (result) => {
     const sites = result.blockedSites || [];
-    if (!sites.includes(site)) {
-      sites.push(site);
+    // Check if site already exists (checking the 'url' property or string itself)
+    const exists = sites.some(s => (typeof s === 'string' ? s : s.url) === site);
+    
+    if (!exists) {
+      sites.push({ url: site, allowSubroutes: allowSubroutes });
       chrome.storage.local.set({ blockedSites: sites }, () => {
         siteInput.value = '';
+        allowSubroutesCheckbox.checked = false;
         restoreOptions();
         showStatus('Site blocked!');
       });
@@ -21,10 +27,10 @@ function addSite() {
 }
 
 // Remove site from storage
-function removeSite(site) {
+function removeSite(siteUrl) {
   chrome.storage.local.get(['blockedSites'], (result) => {
     let sites = result.blockedSites || [];
-    sites = sites.filter(s => s !== site);
+    sites = sites.filter(s => (typeof s === 'string' ? s : s.url) !== siteUrl);
     chrome.storage.local.set({ blockedSites: sites }, () => {
       restoreOptions();
       showStatus('Site unblocked.');
@@ -40,14 +46,17 @@ function restoreOptions() {
     const siteList = document.getElementById('siteList');
     siteList.innerHTML = '';
 
-    sites.forEach((site) => {
+    sites.forEach((siteEntry) => {
+      const siteUrl = typeof siteEntry === 'string' ? siteEntry : siteEntry.url;
+      const allowSubroutes = typeof siteEntry === 'string' ? false : siteEntry.allowSubroutes;
+
       const li = document.createElement('li');
-      li.textContent = site;
+      li.textContent = siteUrl + (allowSubroutes ? ' (Homepage only)' : '');
       
       const deleteBtn = document.createElement('button');
       deleteBtn.textContent = 'Unblock';
       deleteBtn.className = 'delete-btn';
-      deleteBtn.onclick = () => removeSite(site);
+      deleteBtn.onclick = () => removeSite(siteUrl);
       
       li.appendChild(deleteBtn);
       siteList.appendChild(li);

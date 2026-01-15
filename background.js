@@ -16,8 +16,36 @@ async function updateBlockingRules() {
   const existingRules = await chrome.declarativeNetRequest.getDynamicRules();
   const existingRuleIds = existingRules.map(rule => rule.id);
 
+  // Helper to escape regex special characters
+  function escapeRegex(string) {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
   // Create new rules
-  const newRules = sites.map((site, index) => {
+  const newRules = sites.map((siteEntry, index) => {
+    // Handle both legacy (string) and new (object) formats
+    const siteUrl = typeof siteEntry === 'string' ? siteEntry : siteEntry.url;
+    const allowSubroutes = typeof siteEntry === 'string' ? false : siteEntry.allowSubroutes;
+    
+    let condition = {};
+    
+    if (allowSubroutes) {
+        // Create a regex that matches http or https, optional www, the domain, and an optional trailing slash
+        // ^https?:\/\/(www\.)?example\.com\/?$
+        const escapedDomain = escapeRegex(siteUrl);
+        const regex = `^https?://(www\\.)?${escapedDomain}/?$`;
+        
+        condition = {
+            regexFilter: regex,
+            resourceTypes: ['main_frame']
+        };
+    } else {
+        condition = {
+            urlFilter: siteUrl,
+            resourceTypes: ['main_frame']
+        };
+    }
+    
     return {
       id: index + 1,
       priority: 1,
@@ -27,10 +55,7 @@ async function updateBlockingRules() {
           extensionPath: '/blocked.html'
         }
       },
-      condition: {
-        urlFilter: site,
-        resourceTypes: ['main_frame']
-      }
+      condition: condition
     };
   });
 
